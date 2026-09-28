@@ -327,7 +327,9 @@ footer a{color:rgba(255,255,255,0.25)}
     </div>
   </section>
 
-  <div id="performances"></div>
+  <!-- Performance galleries. Replaced at runtime by the Google Drive folders configured in DRIVE_CONFIG (see script);
+       these built-in galleries are the fallback when Drive is not configured or cannot be reached. -->
+  <div id="performances">
   <section style="background:var(--ink2);padding:5rem 10vw">
     <p class="section-eyebrow reveal">March 17, 2024</p>
     <h2 class="section-title reveal" style="color:#fff">Performance at MRU Bella Concert Hall</h2>
@@ -464,6 +466,7 @@ footer a{color:rgba(255,255,255,0.25)}
       <div class="asl-caption-bar"><span class="asl-cap active">Weekly Practice at Mount Royal University Conservatory</span></div>
     </div>
   </section>
+  </div>
 
   <div class="parallax-divider">
     <div class="parallax-text" id="parallaxText">天赐之音 · JOYFUL NOTES · 天赐之音 · JOYFUL NOTES · 天赐之音 ·&nbsp;</div>
@@ -560,6 +563,67 @@ setInterval(()=>{
     if(g.querySelectorAll('.asl-slide').length>1)galStep(g.id.slice(4),1);
   });
 },4500);
+
+// Performance galleries from Google Drive.
+// Put one sub-folder per event inside the parent folder, named "YYYY-MM-DD Event title"
+// (e.g. "2024-03-17 Performance at MRU Bella Concert Hall"). Newest events are shown first,
+// photos inside each folder are sorted by file name. Folders and photos must be shared as
+// "Anyone with the link can view". Leave apiKey empty to use the built-in galleries.
+const DRIVE_CONFIG={
+  apiKey:'',
+  parentFolderId:''
+};
+(function(){
+  const {apiKey,parentFolderId}=DRIVE_CONFIG;
+  if(!apiKey||!parentFolderId)return;
+  const API='https://www.googleapis.com/drive/v3/files';
+  const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function list(q,orderBy){
+    const files=[];let pageToken='';
+    do{
+      const params=new URLSearchParams({q,orderBy,key:apiKey,pageSize:'1000',fields:'nextPageToken,files(id,name)'});
+      if(pageToken)params.set('pageToken',pageToken);
+      const res=await fetch(API+'?'+params);
+      if(!res.ok)throw new Error('Drive API '+res.status);
+      const data=await res.json();
+      files.push(...data.files);pageToken=data.nextPageToken||'';
+    }while(pageToken);
+    return files;
+  }
+  function parseName(name){
+    const m=name.match(/^(\d{4})-(\d{2})-(\d{2})\s*[-–·]?\s*(.*)$/);
+    if(!m)return{date:'',title:name};
+    const d=new Date(+m[1],+m[2]-1,+m[3]);
+    return{date:d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),title:m[4]||name};
+  }
+  function render(ev,i){
+    const id='drive-'+i,{date,title}=parseName(ev.name),n=ev.photos.length;
+    const slides=ev.photos.map((p,j)=>`<div class="asl-slide${j?'':' active'}"><img src="https://lh3.googleusercontent.com/d/${esc(p.id)}=w1600" alt="${esc(title)} — photo ${j+1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"></div>`).join('');
+    const dots=ev.photos.map((p,j)=>`<button class="asl-dot${j?'':' active'}" onclick="galGoTo('${id}',${j})" aria-label="Photo ${j+1}"></button>`).join('');
+    const arrows=n>1?`<button class="asl-arrow asl-prev" onclick="galStep('${id}',-1)" aria-label="Previous">&#8592;</button><button class="asl-arrow asl-next" onclick="galStep('${id}',1)" aria-label="Next">&#8594;</button>`:'';
+    return `<section style="background:${i%2?'var(--ink)':'var(--ink2)'};padding:5rem 10vw">
+      ${date?`<p class="section-eyebrow reveal">${esc(date)}</p>`:''}
+      <h2 class="section-title reveal" style="color:#fff">${esc(title)}</h2>
+      <div class="reveal gallery" id="gal-${id}" style="border-radius:10px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.35)">
+        <div style="position:relative;aspect-ratio:3/2;background:var(--ink)">${slides}${arrows}<div class="asl-dots">${dots}</div></div>
+        <div class="asl-caption-bar"><span class="asl-cap active">${esc(date?title+' · '+date:title)}</span></div>
+      </div>
+    </section>`;
+  }
+  (async()=>{
+    try{
+      const folders=await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name');
+      const events=(await Promise.all(folders.map(async f=>({name:f.name,
+        photos:await list(`'${f.id}' in parents and mimeType contains 'image/' and trashed=false`,'name')})))).filter(e=>e.photos.length);
+      if(!events.length)return;
+      // Dated folders newest first, then undated folders (e.g. "Weekly Practice") alphabetically.
+      const dated=n=>/^\d{4}-\d{2}-\d{2}/.test(n);
+      events.sort((x,y)=>dated(y.name)-dated(x.name)||(dated(x.name)?y.name.localeCompare(x.name):x.name.localeCompare(y.name)));
+      document.getElementById('performances').innerHTML=events.map(render).join('\n');
+      initReveal();
+    }catch(e){console.warn('Google Drive galleries unavailable, using built-in galleries.',e);}
+  })();
+})();
 
 // Hero slideshow
 (function(){
