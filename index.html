@@ -568,7 +568,8 @@ setInterval(()=>{
 // Put one sub-folder per event inside the parent folder, named "YYYY-MM-DD Event title"
 // (e.g. "2024-03-17 Performance at MRU Bella Concert Hall"). Newest events are shown first,
 // photos inside each folder are sorted by file name. Folders and photos must be shared as
-// "Anyone with the link can view". Folders without a leading date are ignored.
+// "Anyone with the link can view". A folder named "Weekly Practice ..." is shown last;
+// any other folder without a leading date is ignored.
 // Leave apiKey empty to use the built-in galleries.
 const DRIVE_CONFIG={
  apiKey:'AIzaSyDxR5MM_SYPTHHtGFV24F_R8WKF9OiuPTM',
@@ -614,13 +615,15 @@ const DRIVE_CONFIG={
   }
   (async()=>{
     try{
-      // Only folders named "YYYY-MM-DD ..." are shown; anything else (e.g. "_No date found") is ignored.
+      // Only folders named "YYYY-MM-DD ..." or "Weekly Practice ..." are shown; anything else (e.g. "_No date found") is ignored.
       const dated=n=>/^\d{4}-\d{2}-\d{2}/.test(n);
-      const folders=(await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name')).filter(f=>dated(f.name));
+      const practice=n=>/^weekly practice/i.test(n);
+      const folders=(await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name')).filter(f=>dated(f.name)||practice(f.name));
       const events=(await Promise.all(folders.map(async f=>({name:f.name,
         photos:await list(`'${f.id}' in parents and mimeType contains 'image/' and trashed=false`,'name')})))).filter(e=>e.photos.length);
       if(!events.length)return;
-      events.sort((x,y)=>y.name.localeCompare(x.name));  // newest first
+      // Dated events newest first, Weekly Practice last.
+      events.sort((x,y)=>practice(x.name)-practice(y.name)||y.name.localeCompare(x.name));
       document.getElementById('performances').innerHTML=events.map(render).join('\n');
       initReveal();
     }catch(e){console.warn('Google Drive galleries unavailable, using built-in galleries.',e);}
