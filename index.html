@@ -568,7 +568,7 @@ setInterval(()=>{
 // Put one sub-folder per event inside the parent folder, named "YYYY-MM-DD Event title"
 // (e.g. "2024-03-17 Performance at MRU Bella Concert Hall"). Newest events are shown first,
 // photos inside each folder are sorted by file name. Folders and photos must be shared as
-// "Anyone with the link can view". Folders whose name starts with "_" are skipped.
+// "Anyone with the link can view". Folders without a leading date are ignored.
 // Leave apiKey empty to use the built-in galleries.
 const DRIVE_CONFIG={
  apiKey:'AIzaSyDxR5MM_SYPTHHtGFV24F_R8WKF9OiuPTM',
@@ -614,14 +614,13 @@ const DRIVE_CONFIG={
   }
   (async()=>{
     try{
-      // Folders starting with "_" (e.g. "_No date found", "_Website - About & Instructors") are never shown.
-      const folders=(await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name')).filter(f=>!f.name.startsWith('_'));
+      // Only folders named "YYYY-MM-DD ..." are shown; anything else (e.g. "_No date found") is ignored.
+      const dated=n=>/^\d{4}-\d{2}-\d{2}/.test(n);
+      const folders=(await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name')).filter(f=>dated(f.name));
       const events=(await Promise.all(folders.map(async f=>({name:f.name,
         photos:await list(`'${f.id}' in parents and mimeType contains 'image/' and trashed=false`,'name')})))).filter(e=>e.photos.length);
       if(!events.length)return;
-      // Dated folders newest first, then undated folders (e.g. "Weekly Practice") alphabetically.
-      const dated=n=>/^\d{4}-\d{2}-\d{2}/.test(n);
-      events.sort((x,y)=>dated(y.name)-dated(x.name)||(dated(x.name)?y.name.localeCompare(x.name):x.name.localeCompare(y.name)));
+      events.sort((x,y)=>y.name.localeCompare(x.name));  // newest first
       document.getElementById('performances').innerHTML=events.map(render).join('\n');
       initReveal();
     }catch(e){console.warn('Google Drive galleries unavailable, using built-in galleries.',e);}
