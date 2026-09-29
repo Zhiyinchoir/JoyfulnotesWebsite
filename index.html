@@ -568,7 +568,8 @@ setInterval(()=>{
 // Put one sub-folder per event inside the parent folder, named "YYYY-MM-DD Event title"
 // (e.g. "2024-03-17 Performance at MRU Bella Concert Hall"). Newest events are shown first,
 // photos inside each folder are sorted by file name. Folders and photos must be shared as
-// "Anyone with the link can view". Leave apiKey empty to use the built-in galleries.
+// "Anyone with the link can view". Folders whose name starts with "_" are skipped.
+// Leave apiKey empty to use the built-in galleries.
 const DRIVE_CONFIG={
   apiKey:'',
   parentFolderId:''
@@ -612,7 +613,8 @@ const DRIVE_CONFIG={
   }
   (async()=>{
     try{
-      const folders=await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name');
+      // Folders starting with "_" (e.g. "_No date found", "_Website - About & Instructors") are never shown.
+      const folders=(await list(`'${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,'name')).filter(f=>!f.name.startsWith('_'));
       const events=(await Promise.all(folders.map(async f=>({name:f.name,
         photos:await list(`'${f.id}' in parents and mimeType contains 'image/' and trashed=false`,'name')})))).filter(e=>e.photos.length);
       if(!events.length)return;
