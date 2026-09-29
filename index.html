@@ -584,10 +584,12 @@ const DRIVE_CONFIG={
   async function list(q,orderBy){
     const files=[];let pageToken='';
     do{
-      const params=new URLSearchParams({q,orderBy,key:apiKey,pageSize:'1000',fields:'nextPageToken,files(id,name)'});
+      // supportsAllDrives/includeItemsFromAllDrives are required for folders in a Shared drive.
+      const params=new URLSearchParams({q,orderBy,key:apiKey,pageSize:'1000',fields:'nextPageToken,files(id,name)',
+        supportsAllDrives:'true',includeItemsFromAllDrives:'true'});
       if(pageToken)params.set('pageToken',pageToken);
       const res=await fetch(API+'?'+params);
-      if(!res.ok)throw new Error('Drive API '+res.status);
+      if(!res.ok)throw new Error('Drive API '+res.status+': '+(await res.text()));
       const data=await res.json();
       files.push(...data.files);pageToken=data.nextPageToken||'';
     }while(pageToken);
