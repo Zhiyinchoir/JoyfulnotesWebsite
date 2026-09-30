@@ -225,7 +225,7 @@ footer a{color:rgba(255,255,255,0.25)}
     <li><a href="#top" class="active">Home</a></li>
     <li><a href="#about">About</a></li>
     <li><a href="#instructors">Instructors</a></li>
-    <li><a href="#performances">Performances</a></li>
+    <li><a href="#photos">Photos</a></li>
     <li><a href="#join">Get Involved</a></li>
   </ul>
   <button class="hamburger" id="hamburger" onclick="toggleMobile()" aria-label="Menu">
@@ -237,7 +237,7 @@ footer a{color:rgba(255,255,255,0.25)}
   <a href="#top" onclick="closeMobile()">Home</a>
   <a href="#about" onclick="closeMobile()">About</a>
   <a href="#instructors" onclick="closeMobile()">Instructors</a>
-  <a href="#performances" onclick="closeMobile()">Performances</a>
+  <a href="#photos" onclick="closeMobile()">Photos</a>
   <a href="#join" onclick="closeMobile()">Get Involved</a>
 </div>
 
@@ -329,7 +329,7 @@ footer a{color:rgba(255,255,255,0.25)}
 
   <!-- Performance galleries. Replaced at runtime by the Google Drive folders configured in DRIVE_CONFIG (see script);
        these built-in galleries are the fallback when Drive is not configured or cannot be reached. -->
-  <div id="performances">
+  <div id="photos">
   <section style="background:var(--ink2);padding:5rem 10vw">
     <p class="section-eyebrow reveal">March 17, 2024</p>
     <h2 class="section-title reveal" style="color:#fff">Performance at MRU Bella Concert Hall</h2>
@@ -626,7 +626,7 @@ const DRIVE_CONFIG={
       if(!events.length)return;
       // Dated events newest first, Weekly Practice last.
       events.sort((x,y)=>practice(x.name)-practice(y.name)||y.name.localeCompare(x.name));
-      document.getElementById('performances').innerHTML=events.map(render).join('\n');
+      document.getElementById('photos').innerHTML=events.map(render).join('\n');
       initReveal();
     }catch(e){console.warn('Google Drive galleries unavailable, using built-in galleries.',e);}
   })();
